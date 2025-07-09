@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watcher's Clock</title>
+
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='1em' font-size='80'>🌓</text></svg>">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300..700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            font-family: "Comfortaa", sans-serif;
+        }
+
+        a {
+            color: black;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        a:is(:hover, :active) {
+            text-decoration: underline;
+        }
+
+        #wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: calc(var(--clock-size) * 0.3);
+            margin-top: 5vh;
+            --clock-size: calc(100px + 20vw);
+            --rim-size: calc(var(--clock-size) * 0.05);
+            --earth-size: calc(var(--clock-size) * 0.4);
+            --moon-size: calc(var(--clock-size) * 0.1);
+            --pin-size: calc(var(--earth-size) * 0.2);
+            --terminator-opacity: 0.5;
+            --light-gold: rgb(255, 251, 234);
+            --gold: rgb(255, 243, 112);
+            --dark-gold: rgb(185, 140, 27);
+            --light-silver: rgb(255, 255, 255);
+            --silver: rgb(232, 232, 232);
+            --dark-silver: rgb(130, 130, 130);
+        }
+
+        .clock {
+            --moon-angle: 0;
+            --earth-angle: 0;
+            --pin-latitude: 0;
+            --pin-longitude: 0;
+            position: relative;
+            width: var(--clock-size);
+            height: var(--clock-size);
+            aspect-ratio: 1 / 1;
+            border-radius: 50%;
+            border: var(--rim-size) solid var(--silver);
+            box-shadow: 0 calc(var(--clock-size) * 0.04) calc(var(--clock-size) * 0.08) var(--dark-silver), 0 calc(var(--clock-size) * 0.02) calc(var(--clock-size) * 0.024) var(--dark-silver) inset;
+            background-color: var(--silver);
+            background-image:
+                linear-gradient(180deg,
+                    var(--light-silver) 40%,
+                    var(--dark-silver));
+            background-size: 100% 300%;
+            background-position: center;
+            z-index: 10;
+        }
+
+        .clock::before {
+            content: " ";
+            position: absolute;
+            top: calc(-1 * var(--rim-size));
+            bottom: calc(-1 * var(--rim-size));
+            left: calc(-1 * var(--rim-size));
+            right: calc(-1 * var(--rim-size));
+            border-radius: 50%;
+            box-shadow: inset 0px calc(var(--clock-size) * 0.008) calc(var(--clock-size) * 0.004) calc(var(--clock-size) * 0.004) var(--light-silver),
+                inset 0px calc(var(--clock-size) * -0.004) 0px calc(var(--clock-size) * 0.004) rgb(92 92 92);
+            background-color: var(--silver);
+            background-image:
+                radial-gradient(transparent calc((var(--clock-size) * 0.49)),
+                    var(--light-silver) calc((var(--clock-size) * 0.5)),
+                    transparent calc((var(--clock-size) * 0.51))),
+                radial-gradient(transparent calc((var(--clock-size) * 0.49)),
+                    var(--dark-silver) calc((var(--clock-size) * 0.5)),
+                    transparent calc((var(--clock-size) * 0.51))),
+                linear-gradient(180deg,
+                    var(--light-silver),
+                    var(--light-silver),
+                    var(--dark-silver));
+            background-repeat: no-repeat, no-repeat, no-repeat;
+            background-position: 0% calc(var(--clock-size) * 0.002), 0% calc(var(--clock-size) * -0.002), 0% 0px;
+            mask-size: 100% 100%;
+            mask-image:
+                radial-gradient(transparent calc((var(--clock-size) * 0.49)),
+                    black calc((var(--clock-size) * 0.51)));
+            opacity: 1;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .earth-wrap {
+            position: relative;
+            width: var(--earth-size);
+            height: var(--earth-size);
+            aspect-ratio: 1 / 1;
+            margin: calc((var(--clock-size) - var(--earth-size)) * 0.5) auto;
+        }
+
+        .earth {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: var(--earth-size);
+            height: var(--earth-size);
+            aspect-ratio: 1 / 1;
+            border-radius: 50%;
+            box-shadow: 0 calc(var(--earth-size) * 0.05) calc(var(--earth-size) * 0.08) var(--dark-gold),
+                0 calc(var(--earth-size) * 0.02) calc(var(--earth-size) * 0.01) calc(var(--earth-size) * 0.01) var(--light-gold) inset;
+            background-color: var(--gold);
+            background-image: linear-gradient(180deg, var(--light-gold) 40%, var(--gold) 70%, var(--dark-gold));
+        }
+
+        .earth::before {
+            content: " ";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            border-radius: 50%;
+            background-image: url("https://raw.githubusercontent.com/Talcite/scp-card-maker/main/north-hemisphere.svg");
+            background-repeat: no-repeat;
+            mix-blend-mode: hard-light;
+            z-index: 1;
+            opacity: 0.6;
+            transform: rotate(calc(var(--earth-angle) * -1deg));
+            pointer-events: none;
+        }
+
+        .terminator {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            clip-path: circle();
+            opacity: var(--terminator-opacity, 0.5);
+            mix-blend-mode: multiply;
+            filter: blur(calc(var(--earth-size) * 0.005));
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .terminator-path {
+            fill: rgb(103, 75, 0);
+            transition-property: d;
+            transition-timing-function: linear;
+        }
+
+        .pin-wrap {
+            position: relative;
+            width: var(--earth-size);
+            height: var(--earth-size);
+            aspect-ratio: 1 / 1;
+            z-index: 2;
+            transform: rotate(calc(var(--earth-angle) * -1deg - var(--pin-longitude) * 1deg - 90deg));
+            pointer-events: none;
+            filter: drop-shadow(0px 0px calc(var(--pin-size) * 0.03) black);
+        }
+
+        .pin {
+            position: absolute;
+            top: calc((var(--pin-latitude, 0) / 90) * (0.5 * var(--earth-size)) - 0.75 * var(--pin-size));
+            left: calc((var(--earth-size) - var(--pin-size)) * 0.5);
+            aspect-ratio: 2 / 3;
+            width: var(--pin-size);
+            background-color: var(--gold);
+            background-image: repeating-conic-gradient(var(--silver) 0deg, var(--dark-silver) 90deg);
+            mask-image: url("data:image/svg+xml,%3Csvg id='Layer_1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0px' y='0px' viewBox='0 0 200 300' style='enable-background:new 0 0 200 300;' xml:space='preserve'%3E%3Cpath class='st0' d='M0,150c84,11.8,100,150,100,150s16-138.2,100-150C116,138.2,100,0,100,0S84,138.2,0,150z'/%3E%3C/svg%3E");
+            filter: contrast(1.3);
+        }
+
+        .moon-wrap {
+            position: absolute;
+            z-index: 1;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            transform: rotate(calc((var(--moon-angle) + 275.75) * -1deg));
+            pointer-events: none;
+        }
+
+        .moon {
+            position: absolute;
+            top: calc(var(--clock-size) * 0.1);
+            left: calc((var(--clock-size) - var(--moon-size)) * 0.5);
+            width: var(--moon-size);
+            height: var(--moon-size);
+            border-radius: 50%;
+            box-shadow: 0 calc(var(--moon-size) * 0.08) calc(var(--moon-size) * 0.16) 0px var(--dark-silver),
+                0 calc(var(--moon-size) * 0.04) calc(var(--moon-size) * 0.02) calc(var(--moon-size) * 0.02) var(--light-silver) inset;
+            background-color: var(--silver);
+            background-image: linear-gradient(180deg, var(--light-silver), 40%, var(--silver), 70%, var(--dark-silver));
+            transform: rotate(calc((var(--moon-angle) + 275.75) * 1deg));
+        }
+
+        button,
+        input[type=radio],
+        input[type=checkbox],
+        input[type=range] {
+            cursor: pointer;
+        }
+
+        #header {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            z-index: 11;
+        }
+
+        #header-left-container,
+        #header-right-container {
+            width: fit-content;
+        }
+
+        #popup-language {
+            padding: 0.5em 0;
+        }
+
+        .language-choices input[type=radio] {
+            opacity: 0;
+            height: 0;
+        }
+
+        .language-choices label {
+            width: calc(100% - 2em);
+            cursor: pointer;
+            padding: 0.5em 1em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .language-choices label:is(:hover, :active, .active) {
+            background-color: black;
+            color: white;
+        }
+
+        .button-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1em;
+        }
+
+        .button-wrap-small {
+            display: flex;
+            gap: min(35vw, 11em);
+            ;
+        }
+
+        button {
+            font-weight: bold;
+            background-color: white;
+            border: 2px solid gray;
+            transition: all 0.3s;
+        }
+
+        button:is(:hover, :active, .active) {
+            background-color: black;
+            color: white;
+            border: 2px solid black;
+        }
+
+        button svg {
+            stroke: black;
+            stroke-width: 0.3em;
+            fill: black;
+            transition: all 0.3s;
+        }
+
+        button:is(#toggle-info, #toggle-tips, #toggle-hemisphere, #toggle-language) svg {
+            stroke-width: 0.2em;
+        }
+
+        button:is(:hover, :active, .active) svg {
+            fill: white;
+        }
+
+        button.wide {
+            padding: 1em 1.5em;
+            border-radius: 1em;
+        }
+
+        button.small {
+            border-radius: 0.7em;
+            aspect-ratio: 1 / 1;
+        }
+
+        button.noborder {
+            border: none;
+            background-color: transparent;
+        }
+
+        button.noborder:is(:hover, :active, .active) {
+            border: none;
+            background-color: transparent;
+        }
+
+        button.noborder svg {
+            fill: white;
+            stroke: black;
+            stroke-width: 0.3em;
+            transition: all 0.3s;
+        }
+
+        button.noborder:is(:hover, :active, .active) svg {
+            fill: black;
+        }
+
+        button#auto-locate {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .popup {
+            position: absolute;
+            border-radius: 0.5em;
+            background-color: white;
+            filter: drop-shadow(gray 0 0.3em 0.5em);
+            padding: 1em;
+            top: 3.3em;
+            width: calc(200px + 5vw);
+            font-size: 0.8rem;
+            line-height: 1.5;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .popup.right {
+            right: 0;
+        }
+
+        .popup.middle {
+            right: 1em;
+        }
+
+        .popup::before {
+            content: "";
+            position: absolute;
+            border-style: solid;
+            border-width: 0 0.7em 0.7em 0.7em;
+            border-color: transparent transparent white transparent;
+            bottom: 100%;
+            margin-left: -0.47em;
+        }
+
+        .popup.right::before {
+            right: 0;
+            margin-right: 0.55em;
+        }
+
+        .popup.middle::before {
+            right: 0;
+            margin-right: 2.7em;
+        }
+
+
+        #popup-language,
+        #popup-hemisphere {
+            width: fit-content;
+        }
+
+        #popup-info {
+            height: 50vh;
+            overflow: auto;
+
+            &::-webkit-scrollbar {
+                width: 0.5em;
+                height: 0.5em;
+            }
+
+            &::-webkit-scrollbar-track {
+                border-radius: 0.5em;
+                background-color: rgba(0, 0, 0, 0);
+            }
+
+            &::-webkit-scrollbar-thumb {
+                border-radius: 0.25em;
+                background-color: rgba(0, 0, 0, 0.2);
+            }
+
+            &::-webkit-scrollbar-thumb:hover {
+                background-color: rgba(0, 0, 0, 0.4);
+            }
+
+            &::-webkit-scrollbar-thumb:active {
+                background-color: rgba(0, 0, 0, .9);
+            }
+        }
+
+        .language-choices {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .note {
+            text-align: center;
+            font-size: 0.8em;
+        }
+
+        .tips {
+            position: relative;
+            z-index: 3;
+            width: max-content;
+
+            display: none;
+            font-size: calc(var(--clock-size) * 0.04);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tip-sub {
+            color: gray;
+            font-style: italic;
+            font-size: 0.95em;
+            letter-spacing: 0.03em;
+        }
+
+        .earth-tip {
+            margin-top: calc(var(--earth-size) * -0.5 - 0.7em);
+            margin-left: calc(var(--earth-size) * 1.05);
+        }
+
+        .moon-tip {
+            white-space: pre-wrap;
+            margin-top: calc(var(--moon-size) * -1.2);
+            margin-left: calc(var(--clock-size) * -0.02);
+        }
+
+        .terminator-tip {
+            margin-top: calc(var(--earth-size) * 0.5 - 1.5em);
+            margin-left: calc(var(--earth-size) * 0.5);
+        }
+
+        .pin-tip {
+            position: absolute;
+            margin-top: calc((var(--pin-latitude, 0) / 90) * (0.5 * var(--earth-size)) - 0.75em);
+            margin-left: calc(var(--earth-size) * 0.5);
+            padding-left: calc(var(--pin-size) * 0.5);
+            transform: rotate(calc(var(--earth-angle) * 1deg + var(--pin-longitude) * 1deg + 90deg));
+            transform-origin: left center;
+        }
+
+        .time-picker {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            flex-direction: column;
+            gap: 1.5em;
+            width: 90vw;
+            max-width: 300px;
+        }
+
+        .time-picker-wrap {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: 10%;
+        }
+
+        .time-picker input[type="date"],
+        .time-picker input[type="time"] {
+            width: 40%;
+            background: rgba(0, 0, 0, .05);
+            border: none;
+            outline: none;
+            padding: 0.5em;
+            border-radius: 0.5em;
+            transition: background-color 0.3s;
+
+            &:hover {
+                background-color: rgba(0, 0, 0, .1);
+            }
+        }
+
+        #time-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            background-color: rgba(0, 0, 0, .05);
+            height: 1.5em;
+            border-radius: 0.25em;
+            transition: background-color 0.3s;
+        }
+
+        #time-slider:hover {
+            background-color: rgba(0, 0, 0, .1);
+        }
+
+        #time-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 0.25em;
+            height: 1.7em;
+            border: none;
+            border-radius: 0.125em;
+            background-color: rgba(0, 0, 0, .6);
+            transition: all 0.3s;
+        }
+
+        #time-slider::-webkit-slider-thumb:hover {
+            background-color: rgba(0, 0, 0, .8);
+        }
+
+        #time-slider::-webkit-slider-thumb:active {
+            background-color: rgba(0, 0, 0, 1);
+        }
+
+        #playback-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            background-color: rgba(0, 0, 0, .05);
+            height: 0.5em;
+            border-radius: 0.25em;
+            transition: background-color 0.3s;
+        }
+
+        #playback-slider:hover {
+            background-color: rgba(0, 0, 0, .1);
+        }
+
+        #playback-slider:hover::-webkit-slider-thumb {
+            box-shadow: 0 0 0 1em rgba(0, 0, 0, .1);
+        }
+
+        #playback-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 1em;
+            height: 1em;
+            border: none;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, .6);
+            transition: all 0.3s;
+        }
+
+        #playback-slider::-webkit-slider-thumb:hover {
+            background-color: rgba(0, 0, 0, .8);
+        }
+
+        #playback-slider::-webkit-slider-thumb:active {
+            background-color: rgba(0, 0, 0, 1);
+            box-shadow: 0 0 0 1em rgba(0, 0, 0, .2);
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="header">
+        <div id="header-left-container">
+            <button class="small noborder" id="toggle-info" onclick="toggleInfo()">
+                <svg viewBox="0 0 100 100" width="2em" height="2em" preserveAspectRatio="xMidYMid meet">
+                    <path
+                        d="M95,50c0,24.9-20.1,45-45,45S5,74.9,5,50S25.1,5,50,5S95,25.1,95,50z M55.5,61c0-3.7,2.6-6.4,6.8-10.4
+		c3.6-3.4,7.2-6.9,8.3-11.9c1.2-5.6,0-11.5-3.4-15.7c-2.6-3.2-7.7-7-17.4-7c-15.6,0-20.6,11.6-21,17.7c-0.2,2.8,1.9,5.1,4.6,5.3
+		c2.7,0.2,5.1-1.9,5.3-4.6c0.1-0.9,0.9-8.4,11.1-8.4c3.2,0,7.4,0.6,9.6,3.3c1.7,2.1,1.8,5.1,1.4,7.2c-0.5,2.1-2.9,4.4-5.5,6.8
+		c-4.4,4.2-9.9,9.4-9.9,17.7c0,2.8,2.2,5,5,5S55.5,63.8,55.5,61z M50.4,71c-3.3,0-6,2.7-6,6s2.7,6,6,6s6-2.7,6-6S53.7,71,50.4,71z" />
+                </svg>
+            </button>
+            <div class="popup" id="popup-info">
+                <p>The <em>Watcher's Clock</em> is a fictional contraption, an orrery-like timepiece serving in a
+                    remnant
+                    of a museum after humanity has become extinct on Earth due to a disaster. It has chosen the easiest
+                    way
+                    to represent time in a kinda culture-independent manner: the time in a day is determined by Earth's
+                    rotation, the terminator shifts back and forth during the year, and month is defined by lunar cycle
+                    (synodic month).</p>
+                <h2>Credits:</h2>
+                <ul>
+                    <li><strong>north-hemisphere.svg</strong>, adopted from <a
+                            href="https://commons.wikimedia.org/wiki/File:Northern_Hemisphere_LamAz.svg"
+                            target="_blank">Wikimedia Commons</a>, under CC0 license</li>
+                    <li><strong>south-hemisphere.svg</strong>, adopted from <a
+                            href="https://commons.wikimedia.org/wiki/File:Southern_Hemisphere_LamAz.svg"
+                            target="_blank">Wikimedia Commons</a>, under CC0 license</li>
+                </ul>
+            </div>
+            <button class="small noborder" id="toggle-tips" onclick="toggleTips()">
+                <svg viewBox="0 0 100 100" width="2em" height="2em" preserveAspectRatio="xMidYMid meet">
+                    <path class="st0" d="M59.8,83.5H40.2V92h2.6c0,0.1,0,0.2,0,0.2c0,1.7,1.4,3.2,3.2,3.2h8.1c1.7,0,3.2-1.4,3.2-3.2c0-0.1,0-0.2,0-0.2
+	h2.6L59.8,83.5L59.8,83.5z" />
+                    <path class="st0" d="M70.2,61.3L70.2,61.3c0,0-8.3,9.3-9.8,18.6H50H39.6c-1.5-9.3-9.8-18.6-9.8-18.6l0,0c-3.1-4.2-5-9.4-5-15.1
+	C24.8,32.3,36.1,21,50,21s25.2,11.3,25.2,25.2C75.2,51.9,73.4,57.1,70.2,61.3z M65.3,49.7c-0.3-0.6-1.7-3.5-4.3-4.5
+	c-0.6-0.2-1.2-0.3-1.7-0.3c-0.7,0-1.4,0.2-2.1,0.5c-1.3,0.6-2.1,1.2-2.6,1.6c-0.1-0.1-0.3-0.3-0.4-0.4c-0.9-1-2.2-2.4-4.3-2.4
+	s-3.4,1.5-4.3,2.4c-0.1,0.1-0.3,0.3-0.4,0.4c-0.5-0.4-1.2-1-2.6-1.6c-0.7-0.3-1.4-0.5-2.1-0.5c-0.6,0-1.2,0.1-1.7,0.3
+	c-2.6,1-4,3.9-4.3,4.5c-0.4,0.8-0.3,1.7,0.2,2.5c4.3,7.1,8.1,24.5,8.8,27.8H49c0-0.2,0-0.4-0.1-0.5c-0.2-0.8-3.9-19.3-8.8-28.6
+	c0.2-0.2,0.3-0.4,0.4-0.5c0.7,0.3,1,0.6,1.3,0.8c0.8,0.7,1.7,1.3,3.6,1.3c2.1,0,3.4-1.4,4.2-2.4c0.1-0.1,0.1-0.2,0.2-0.3
+	c0.1,0.1,0.2,0.2,0.2,0.3c0.9,1,2.1,2.4,4.2,2.4c1.9,0,2.8-0.6,3.6-1.3c0.3-0.3,0.6-0.5,1.3-0.8c0.1,0.1,0.3,0.3,0.4,0.5
+	c-4.9,9.3-8.6,27.8-8.8,28.6c0,0.2-0.1,0.4-0.1,0.5h5.5c0.7-3.3,4.5-20.6,8.8-27.8C65.6,51.4,65.7,50.5,65.3,49.7z" />
+                    <g>
+                        <path class="st0"
+                            d="M50,16.1c-1.2,0-2.3-1-2.3-2.3v-9c0-1.2,1-2.3,2.3-2.3s2.3,1,2.3,2.3v9C52.3,15.1,51.2,16.1,50,16.1z" />
+                        <path class="st0" d="M26.1,25.9c-0.6,0-1.2-0.2-1.6-0.7l-6.4-6.4c-0.9-0.9-0.9-2.3,0-3.2c0.9-0.9,2.3-0.9,3.2,0l6.4,6.4
+		c0.9,0.9,0.9,2.3,0,3.2C27.3,25.7,26.7,25.9,26.1,25.9z" />
+                        <path class="st0" d="M16.3,49.8h-9c-1.2,0-2.3-1-2.3-2.3c0-1.2,1-2.3,2.3-2.3h9c1.2,0,2.3,1,2.3,2.3C18.5,48.8,17.5,49.8,16.3,49.8
+		z" />
+                        <path class="st0" d="M19.8,80c-0.6,0-1.2-0.2-1.6-0.7c-0.9-0.9-0.9-2.3,0-3.2l6.4-6.4c0.9-0.9,2.3-0.9,3.2,0c0.9,0.9,0.9,2.3,0,3.2
+		l-6.4,6.4C20.9,79.8,20.3,80,19.8,80z" />
+                        <path class="st0" d="M80.2,80c-0.6,0-1.2-0.2-1.6-0.7L72.3,73c-0.9-0.9-0.9-2.3,0-3.2c0.9-0.9,2.3-0.9,3.2,0l6.4,6.4
+		c0.9,0.9,0.9,2.3,0,3.2C81.4,79.8,80.8,80,80.2,80z" />
+                        <path class="st0"
+                            d="M92.7,49.8h-9c-1.2,0-2.3-1-2.3-2.3c0-1.2,1-2.3,2.3-2.3h9c1.2,0,2.3,1,2.3,2.3S94,49.8,92.7,49.8z" />
+                        <path class="st0" d="M73.9,25.9c-0.6,0-1.2-0.2-1.6-0.7c-0.9-0.9-0.9-2.3,0-3.2l6.4-6.4c0.9-0.9,2.3-0.9,3.2,0
+		c0.9,0.9,0.9,2.3,0,3.2l-6.4,6.4C75,25.7,74.4,25.9,73.9,25.9z" />
+                    </g>
+
+                </svg>
+            </button>
+        </div>
+        <div id="header-right-container">
+            <button class="small noborder" id="toggle-hemisphere" onclick="toggleHemisphere()">
+                <svg viewBox="0 0 100 100" width="2em" height="2em" preserveAspectRatio="xMidYMid meet">
+                    <path d="M86.9,41.6c-0.6,0.2-1.2,0.3-1.7,0.3c-2,0-3.9-1.2-4.7-3.3c-5.1-13.6-18.8-22.3-33.3-21c-7.4,0.6-14.2,3.7-19.5,8.7l6.2,3.1
+	L13.1,43.2l-1.5-24.9l6.7,3.4c7.2-8,17.2-13.1,28-14c19-1.7,36.9,9.6,43.5,27.5C90.8,37.7,89.5,40.6,86.9,41.6z M86.9,56.8
+	L66.1,70.6l6.2,3.1c-5.3,5-12,8.1-19.5,8.7c-14.5,1.3-28.2-7.4-33.3-21c-1-2.6-3.8-3.9-6.4-2.9c-2.6,1-3.9,3.8-2.9,6.4
+	C16.4,81.5,32.4,92.5,50,92.5c1.2,0,2.5-0.1,3.7-0.2c10.7-0.9,20.8-6,28-14l6.7,3.4L86.9,56.8z M50,32.5c-9.7,0-17.5,7.8-17.5,17.5
+	S40.3,67.5,50,67.5S67.5,59.7,67.5,50S59.7,32.5,50,32.5z" />
+                </svg>
+            </button>
+            <div class="popup middle" id="popup-hemisphere">
+                <input type="checkbox" id="hemisphere">
+            </div>
+            <button class="small noborder" id="toggle-language" onclick="toggleLanguage()">
+                <svg viewBox="0 0 100 100" width="2em" height="2em" preserveAspectRatio="xMidYMid meet">
+                    <path d="M50,92c-0.3-0.3-0.6-0.5-0.9-0.8c0,0,0,0,0,0L49,91.1L48.9,91c-2.9-2.8-7.1-7.4-10.6-13.9c3.8-0.3,7.7-0.5,11.7-0.5
+	c3.9,0,7.8,0.2,11.7,0.5C58.1,83.6,54,88.2,51.1,91L51,91.1l0,0.1l0,0C50.6,91.5,50.3,91.8,50,92z M36.8,90.9
+	c-6.5-2.1-12.4-5.7-17.2-10.5c3-0.8,6.1-1.6,9.5-2.1C31.2,82.8,33.8,87,36.8,90.9z M63.2,90.9c3-3.9,5.6-8.2,7.7-12.6
+	c3.3,0.6,6.5,1.3,9.5,2.1C75.6,85.2,69.7,88.8,63.2,90.9z M13.6,72.8c-0.3-0.4-0.6-0.9-0.8-1.4c-3-5.2-4.9-11-5.5-17h15.9
+	c0.3,5.3,1.2,10.3,2.7,15.2C21.5,70.5,17.4,71.6,13.6,72.8z M86.4,72.8c-3.8-1.3-7.9-2.3-12.3-3.2c1.5-4.9,2.4-10,2.7-15.2h15.9
+	c-0.6,6-2.5,11.8-5.5,17C87,72,86.7,72.4,86.4,72.8z M65.5,68.4c-5-0.6-10.2-0.9-15.5-0.9c-5.2,0-10.4,0.3-15.5,0.9
+	c-1.5-4.4-2.4-9.1-2.8-13.9h36.6C67.9,59.2,67,63.9,65.5,68.4z M76.9,45.5c-0.3-5.2-1.2-10.3-2.7-15.2c4.4-0.8,8.5-1.9,12.3-3.2
+	c0.3,0.4,0.6,0.9,0.8,1.4c3,5.2,4.9,11,5.5,17H76.9z M31.7,45.5c0.4-4.7,1.3-9.4,2.8-13.9c5,0.6,10.2,0.9,15.5,0.9
+	c5.2,0,10.4-0.3,15.5-0.9c1.5,4.4,2.4,9.1,2.8,13.9H31.7z M7.2,45.5c0.6-6,2.5-11.7,5.5-17c0.3-0.5,0.5-0.9,0.8-1.4
+	c3.8,1.3,7.9,2.3,12.3,3.2c-1.5,4.9-2.4,10-2.7,15.2H7.2z M50,23.4c-3.9,0-7.8-0.2-11.7-0.5C41.9,16.4,46,11.8,48.9,9L49,8.9
+	c0,0,0.1-0.1,0.2-0.2C49.4,8.5,49.7,8.2,50,8c0.3,0.3,0.6,0.5,0.9,0.8l0,0l0,0.1L51.1,9c2.9,2.8,7.1,7.4,10.6,13.9
+	C57.8,23.3,53.9,23.4,50,23.4z M70.9,21.7c-2.1-4.5-4.7-8.8-7.7-12.6c6.5,2.1,12.4,5.7,17.2,10.5C77.4,20.4,74.2,21.2,70.9,21.7z
+	 M29.1,21.7c-3.3-0.6-6.5-1.3-9.5-2.1c4.8-4.8,10.7-8.4,17.2-10.5C33.8,13,31.2,17.2,29.1,21.7z" />
+
+                </svg>
+            </button>
+            <div class="popup right" id="popup-language">
+                <div class="language-choices">
+                    <input type="radio" id="en" name="lang" value="en" checked>
+                    <label for="en" id="hint-en">English</label>
+
+                    <input type="radio" id="cn" name="lang" value="cn">
+                    <label for="cn" id="hint-cn">中文</label>
+
+                    <input type="radio" id="jp" name="lang" value="ja">
+                    <label for="jp" id="hint-jp">日本語</label>
+
+                    <input type="radio" id="eo" name="lang" value="eo">
+                    <label for="eo" id="hint-eo">Esperanto</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="wrapper">
+        <div class="clock" id="clock1">
+
+            <div class="earth-wrap" id="earth-wrap">
+
+                <div class="pin-wrap">
+                    <div class="pin" id="pin1">
+                    </div>
+                    <div class="tips pin-tip" id="pin-tip">
+                        ◀ Location of Observation
+                    </div>
+                </div>
+
+                <div class="terminator">
+
+                    <svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid meet">
+                        <path class="terminator-path" id="terminator-path" d="M0,0 L150,0 L150,300 L0,300 Z"></path>
+                    </svg>
+
+                </div>
+                <div class="earth" id="earth"></div>
+                <div class="tips earth-tip" id="earth-tip">
+                    ◀ Polar View of Earth
+                </div>
+                <div class="tips terminator-tip" id="terminator-tip">
+                    ◀ Terminator
+                </div>
+            </div>
+
+            <div class="moon-wrap">
+                <div class="moon">
+                    <div class="tips moon-tip" id="moon-tip">
+                        Moon<br> ▼
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="button-wrap">
+            <div class="button-wrap-small">
+                <button class="small noborder" id="toggle-location" onclick="toggleLocationOption()">
+                    <svg viewBox="0 0 100 100" width="2em" height="2em" preserveAspectRatio="xMidYMid meet">
+                        <path class="st0" d="M50,5C29.6,5,13,21.6,13,42c0,7.2,2.1,14.1,5.7,19.9L50,95l31.3-33.1C84.9,56.1,87,49.2,87,42
+                    C87,21.6,70.4,5,50,5z M50,55c-7.2,0-13-5.8-13-13s5.8-13,13-13s13,5.8,13,13S57.2,55,50,55z" />
+                    </svg>
+                </button>
+                <button class="small noborder" id="toggle-time" onclick="toggleTimeOption()">
+                    <svg viewBox="0 0 100 100" width="2em" height="2em" preserveAspectRatio="xMidYMid meet">
+                        <path d="M95,50c0,24.9-20.1,45-45,45S5,74.9,5,50S25.1,5,50,5S95,25.1,95,50z M72.5,45.5h-18V23c0-2.5-2-4.5-4.5-4.5
+		c-2.5,0-4.5,2-4.5,4.5v27c0,2.5,2,4.5,4.5,4.5h22.5c2.5,0,4.5-2,4.5-4.5C77,47.5,75,45.5,72.5,45.5z" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="time-picker" id="time-picker">
+                <div class="time-picker-wrap" id="time-picker-wrap">
+                    <input type="date" id="input-date">
+                    <input type="time" id="input-time" step="1">
+                </div>
+                <input type="range" id="time-slider" min="0" max="86399" value="43200">
+                <div class="note" id="playback-note">Playback Speed: <span id="playback-speed"></span>x</div>
+                <input type="range" id="playback-slider" min="-100000" max="100000" value="0">
+            </div>
+            <div class="note" id="note0"></div>
+            <div class="note" id="note1"></div>
+            <button class="wide" id="auto-locate" onclick="autoLocatePin()">Auto-locate Where You Are Now!</button>
+            <br>
+            <div class="note" id="note2"></div>
+        </div>
+    </div>
+
+    <script id="buttons">
+        function toggleInfo() {
+            const infoBtn = document.getElementById("toggle-info");
+            const popupInfo = document.getElementById("popup-info");
+
+            if (popupInfo.style.display === "block") {
+                infoBtn.classList.remove("active");
+                console.log("Popup-info hidden via button.");
+                popupInfo.style.opacity = 0;
+                setTimeout(() => {
+                    popupInfo.style.display = "none";
+                }, 300);
+
+            } else {
+                infoBtn.classList.add("active");
+                console.warn("Popup-info shown via button.");
+                popupInfo.style.display = "block";
+                setTimeout(() => {
+                    popupInfo.style.opacity = 1;
+                }, 10);
+            }
+        }
+        function toggleLanguage() {
+            const popupLanguage = document.getElementById("popup-language");
+            const languageBtn = document.getElementById("toggle-language");
+            if (popupLanguage.style.display === "block") {
+                languageBtn.classList.remove("active");
+                console.warn("Popup-language hidden via button.");
+                popupLanguage.style.opacity = 0;
+                setTimeout(() => {
+                    popupLanguage.style.display = "none";
+                }, 300);
+
+            } else {
+                languageBtn.classList.add("active");
+                console.warn("Popup-language shown via button.");
+                popupLanguage.style.display = "block";
+                setTimeout(() => {
+                    popupLanguage.style.opacity = 1;
+                }, 10);
+            }
+        }
+        function toggleHemisphere() {
+            const popupHemisphere = document.getElementById("popup-hemisphere");
+            const hemisphereBtn = document.getElementById("toggle-hemisphere");
+            if (popupHemisphere.style.display === "block") {
+                hemisphereBtn.classList.remove("active");
+                console.warn("Popup-hemisphere hidden via button.");
+                popupHemisphere.style.opacity = 0;
+                setTimeout(() => {
+                    popupHemisphere.style.display = "none";
+                }, 300);
+            } else {
+                hemisphereBtn.classList.add("active");
+                console.warn("Popup-hemisphere shown via button.");
+                popupHemisphere.style.display = "block";
+                setTimeout(() => {
+                    popupHemisphere.style.opacity = 1;
+                }, 10);
+            }
+        }
+
+
+        // Hide popup when clicking outside.
+
+        document.addEventListener('click', function (event) {
+            const infoBtn = document.getElementById("toggle-info");
+            const hemisphereBtn = document.getElementById("toggle-hemisphere");
+            const languageBtn = document.getElementById("toggle-language");
+            const popupInfo = document.getElementById("popup-info");
+            const popupHemisphere = document.getElementById("popup-hemisphere");
+            const popupLanguage = document.getElementById("popup-language");
+
+            if (!popupInfo.contains(event.target) && !infoBtn.contains(event.target) && popupInfo.style.display === "block") {
+                console.warn("Popup-info hidden via click outside.");
+                popupInfo.style.opacity = 0;
+                setTimeout(() => {
+                    popupInfo.style.display = "none";
+                }, 300);
+                infoBtn.classList.remove("active");
+
+            }
+            if (!popupHemisphere.contains(event.target) && !hemisphereBtn.contains(event.target) && popupHemisphere.style.display === "block") {
+                console.warn("Popup-hemisphere hidden via click outside.");
+                popupHemisphere.style.opacity = 0;
+                setTimeout(() => {
+                    popupHemisphere.style.display = "none";
+                }, 300);
+                hemisphereBtn.classList.remove("active");
+            }
+            if (!popupLanguage.contains(event.target) && !languageBtn.contains(event.target) && popupLanguage.style.display === "block") {
+                console.warn("Popup-language hidden via click outside.");
+                popupLanguage.style.opacity = 0;
+                setTimeout(() => {
+                    popupLanguage.style.display = "none";
+                }, 300);
+                languageBtn.classList.remove("active");
+            }
+        }, true);
+
+        function toggleTips() {
+            // This is another type of toggle button.
+            // Make sure the 💡 button icon stays at the "lit" state after clicked;
+            // only remove this class when it is clicked again.
+            // Serves as a visual hint for users that the tips are at the "shown" state.
+            document.getElementById("toggle-tips").classList.toggle("active");
+            const tips = document.querySelectorAll(".tips");
+            tips.forEach(tips => {
+                if (tips.style.display === "block") {
+                    setTimeout(() => {
+                        tips.style.opacity = 0;
+                    }, 10);
+                    setTimeout(() => {
+                        tips.style.display = "none";
+                    }, 310);
+                    console.warn("Tips hidden via button.");
+                } else {
+                    tips.style.display = "block";
+                    setTimeout(() => {
+                        tips.style.opacity = 1;
+                    }, 10);
+                    console.warn("Tips shown via button.");
+                }
+            });
+        }
+
+        function toggleLocationOption() { }
+
+        let syncInput;
+        let updateClock;
+
+        function toggleTimeOption() {
+            const timeBtn = document.getElementById("toggle-time");
+            const timePicker = document.getElementById("time-picker");
+            if (timePicker.style.display === "flex") {
+                timeBtn.classList.remove("active");
+                console.warn("Time picker hidden via button.");
+                timePicker.style.display = "none";
+                timePicker.style.opacity = 0;
+
+                if (syncInput) {
+                    clearInterval(syncInput);
+                    syncInput = null;
+                }
+                if (typeof syncInput === "undefined" || !syncInput) {
+                    syncToNow();
+                    syncInput = setInterval(syncToNow, 1000);
+                    console.warn("Input sync restarted.");
+                }
+
+                if (updateClock) {
+                    clearInterval(updateClock);
+                    updateClock = null;
+                }
+                if (typeof updateClock === "undefined" || !updateClock) {
+                    tickClock();
+                    updateClock = setInterval(tickClock, 1000);
+                    console.warn("Real-time clock restarted.");
+                }
+            } else {
+                timeBtn.classList.add("active");
+                console.warn("Time picker shown via button.");
+                timePicker.style.display = "flex";
+                setTimeout(() => {
+                    timePicker.style.opacity = 1;
+                }, 10);
+            }
+        }
+    </script>
+
+    <script id="pick-location">
+        const clock = document.getElementById("clock1");
+        const earth = document.getElementById("earth");
+        const locationBtn = document.getElementById("toggle-location");
+        const autoLocateBtn = document.getElementById("auto-locate");
+        const note1 = document.getElementById("note1");
+        const note2 = document.getElementById("note2");
+
+        let isActive = false;
+
+        locationBtn.addEventListener('click', function () {
+            if (autoLocateBtn.style.display === "block") {
+                autoLocateBtn.style.display = "none";
+                autoLocateBtn.style.opacity = 0;
+                console.warn("Auto-locate hidden via button.");
+            } else {
+                autoLocateBtn.style.display = "block";
+                setTimeout(() => {
+                    autoLocateBtn.style.opacity = 1;
+                }, 10);
+                console.warn("Auto-locate shown via button.");
+            }
+
+            if (!isActive) {
+                locationBtn.classList.add("active");
+                document.body.style.cursor = 'crosshair';
+                earth.style.cursor = 'crosshair';
+                isActive = true;
+            } else {
+                locationBtn.classList.remove("active");
+                note1.innerHTML = "";
+                document.body.style.cursor = 'default';
+                earth.style.cursor = 'default';
+                isActive = false;
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            if (isActive && e.target !== earth && e.target !== locationBtn) {
+                note1.innerHTML = "Please click and place the pin on the Earth plate.";
+            }
+        });
+
+        earth.addEventListener('click', function (e) {
+            if (!isActive) return;
+            locationBtn.classList.remove("active");
+
+            const rect = earth.getBoundingClientRect();
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const radius = rect.width / 2;
+
+            const clickX = e.clientX - rect.left - centerX;
+            const clickY = e.clientY - rect.top - centerY;
+
+            const r = Math.sqrt(clickX * clickX + clickY * clickY);
+
+            const latitude = (radius - r) / radius * 90;
+
+            let longitude = Math.atan2(clickY, clickX) * 180 / Math.PI;
+
+            // Shift longitude to default (0° at positive X) to Earth plate reference (0° at negative X).
+            if (longitude <= 0) {
+                longitude = (-180 - longitude);
+            } else {
+                longitude = (180 - longitude);
+            }
+
+            // Get Earth's current position from CSS style.
+            const earthAngle = parseFloat(getComputedStyle(document.querySelector('.clock'))
+                .getPropertyValue('--earth-angle')
+                .trim());
+
+            console.log('Current Earth Angle:', earthAngle);
+
+            // Offset the current angle to ensure the picked value is correct.
+            longitude = longitude - earthAngle;
+
+            console.log("rect: " + rect + '\n'
+                + "rectWidth: " + rect.width + '\n'
+                + "centerX: " + centerX + '\n'
+                + "centerX: " + centerX + '\n'
+                + "centerY: " + centerY + '\n'
+                + "radius: " + radius + '\n'
+                + "clickX: " + clickX + '\n'
+                + "clickY: " + clickY + '\n'
+                + "r: " + r + '\n'
+                + "latitude: " + latitude + '\n'
+                + "longitude: " + longitude + '\n');
+
+            // Pass the values to the Earth plate and show them in the notice area.
+            if (r <= radius) {
+                // Set latitude first because it's much more simpler.
+                clock.style.setProperty('--pin-latitude', latitude);
+
+                if (earthAngle > 180) {
+                    if (longitude < -180) {
+                        longitude += 360;
+                        clock.style.setProperty('--pin-longitude', longitude);
+                        note1.innerHTML = // Convert to absolute value for display. Same hereafter.
+                            `Latitude: ${latitude.toFixed(2)}° N
+                            <br>
+                            Longitude:  ${Math.abs(longitude).toFixed(2)}° E`;  // East longitude.
+                    } else {
+                        clock.style.setProperty('--pin-longitude', longitude);
+                        note1.innerHTML =
+                            `Latitude: ${latitude.toFixed(2)}° N
+                            <br>
+                            Longitude:  ${Math.abs(longitude).toFixed(2)}° W`;  // West longitude.
+                    }
+                }
+
+                else {
+                    if (longitude < -180) {
+                        longitude += 360;
+                        clock.style.setProperty('--pin-longitude', longitude);
+                        note1.innerHTML =
+                            `Latitude: ${latitude.toFixed(2)}° N
+                            <br>
+                            Longitude:  ${Math.abs(longitude).toFixed(2)}° E`;  // East longitude.
+                    }
+                    else if (longitude >= 0) {
+                        clock.style.setProperty('--pin-longitude', longitude);
+                        note1.innerHTML =
+                            `Latitude: ${latitude.toFixed(2)}° N
+                            <br>
+                            Longitude:  ${Math.abs(longitude).toFixed(2)}° E`;  // East longitude.
+                    } else {
+                        clock.style.setProperty('--pin-longitude', longitude);
+                        note1.innerHTML =
+                            `Latitude: ${latitude.toFixed(2)}° N
+                            <br>
+                            Longitude:  ${Math.abs(longitude).toFixed(2)}° W`;  // West longitude.
+                    }
+                }
+                autoLocateBtn.style.display = "none";
+                autoLocateBtn.style.opacity = 0;
+                console.warn("Auto-locate hidden after pick.");
+                note2.innerHTML = "";
+                document.body.style.cursor = 'default';
+                earth.style.cursor = 'default';
+                isActive = false;
+            }
+        });
+    </script>
+
+    <script id="auto-locate">
+        function autoLocatePin() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(placePin);
+            } else {
+                document.getElementById("note2").innerHTML =
+                    "It seems that geolocation is not supported by this browser or you have denied the access to your location.";
+            }
+
+            function placePin(pin) {
+                const pinLatitude = pin.coords.latitude;
+                const pinLongitude = pin.coords.longitude;
+                document.getElementById('clock1').style.setProperty('--pin-latitude', pinLatitude);
+                document.getElementById('clock1').style.setProperty('--pin-longitude', pinLongitude);
+                console.log("User latitude: " + pinLatitude);
+                console.log("User longitude: " + pinLongitude);
+                // West longitude
+                if (pinLongitude < 0) {
+                    note1.innerHTML =
+                        `Latitude: ${pinLatitude.toFixed(2)}° N
+                        <br>
+                        Longitude:  ${Math.abs(pinLongitude).toFixed(2)}° W`;  // Convert to absolute value.
+                }
+                // East longitude
+                else {
+                    note1.innerHTML =
+                        `Latitude: ${pinLatitude.toFixed(2)}° N
+                        <br>
+                        Longitude:  ${Math.abs(pinLongitude).toFixed(2)}° E`;
+                }
+
+                document.getElementById("note2").innerHTML =
+                    "Auto-located successfully. Please check the star-shaped pin above. <br> This location is determined by your public IP address and might be inaccurate.";
+            }
+        }
+    </script>
+
+    <script id="pick-time">
+        const dateInput = document.getElementById('input-date');
+        const timeInput = document.getElementById('input-time');
+        const timeSlider = document.getElementById('time-slider');
+
+        function syncToNow() {
+            let now = new Date();
+            dateInput.value = now.toISOString().slice(0, 10);
+            timeInput.value = now.toTimeString().slice(0, 8);
+            timeSlider.value = inputToSlider(timeInput.value);
+        }
+
+        syncToNow();
+        syncInput = setInterval(syncToNow, 1000);
+
+        function changeClock() {
+            clearInterval(syncInput);
+            const d = dateInput.value;
+            const t = timeInput.value;
+            if (!d || !t) return null;
+
+            const selectedTime = new Date(`${dateInput.value}T${timeInput.value}`);
+            console.log("Selected time:" + selectedTime);
+            clearInterval(updateClock);
+
+            const selectedYear = dateInput.value.split('-')[0];
+            if (selectedYear < 100 || selectedYear > 9999) {
+                document.getElementById("note0").innerHTML =
+                    "Due to JavaScript limitations, the year must be in the range from 100 CE to 9999 CE.";
+                return;
+            } else {
+                document.getElementById("note0").innerHTML = "";
+                tickClock(selectedTime);
+            }
+        }
+
+        function sliderToInput(secs) {
+            const h = String(Math.floor(secs / 3600)).padStart(2, '0');
+            const m = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
+            const s = String(secs % 60).padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        function inputToSlider(timestr) {
+            const [h, m, s = "0"] = timestr.split(':');
+            return (+h) * 3600 + (+m) * 60 + (+s);
+        }
+
+        dateInput.addEventListener('input', changeClock);
+
+        timeInput.addEventListener('input', () => {
+            changeClock();
+            timeSlider.value = inputToSlider(timeInput.value);
+        });
+
+        timeSlider.addEventListener('input', () => {
+            timeInput.value = sliderToInput(Number(timeSlider.value));
+            changeClock();
+        });
+    </script>
+
+    <script id="playback">
+
+        const speedSlider = document.getElementById('playback-slider');
+        const sliderValueDisplay = document.getElementById('playback-speed');
+
+        // State
+        let playbackSpeed = 0; // seconds per second
+        let lastTimestamp = null;
+        let currentDate = new Date(); // Internal representation
+
+        // Initialize date/time inputs to now
+        function pad(n, len = 2) { return n.toString().padStart(len, '0'); }
+        function setInputsFromDate(date) {
+            dateInput.value = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+            timeInput.value = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+        }
+        setInputsFromDate(currentDate);
+
+        // When user changes date/time manually, update our internal currentDate
+        dateInput.addEventListener('input', updateCurrentDateFromInputs);
+        timeInput.addEventListener('input', updateCurrentDateFromInputs);
+
+        function updateCurrentDateFromInputs() {
+            const d = dateInput.value;
+            const t = timeInput.value;
+            if (d && t) {
+                // Support seconds in time input
+                const [hour, min, sec = "0"] = t.split(':');
+                currentDate = new Date(`${d}T${pad(hour)}:${pad(min)}:${pad(sec)}`);
+            }
+        }
+
+        // When user changes the speed slider
+        speedSlider.addEventListener('input', () => {
+            playbackSpeed = parseInt(speedSlider.value, 10);
+            sliderValueDisplay.textContent = playbackSpeed;
+            if (playbackSpeed !== 0 && !animationFrame) {
+                lastTimestamp = null;
+                animationFrame = requestAnimationFrame(updatePlayback);
+            }
+        });
+
+        // Core animation loop
+        let animationFrame = null;
+        function updatePlayback(timestamp) {
+            if (playbackSpeed === 0) {
+                animationFrame = null;
+                return;
+            }
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const deltaMs = timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+            // How many seconds should the clock advance in this frame?
+            // playbackSpeed is seconds per real-time second.
+            // So deltaTime in seconds is deltaMs/1000 * playbackSpeed
+            const step = (deltaMs / 1000) * playbackSpeed;
+            // To keep it smooth, even for large playbackSpeed, break into max 200ms per frame (so, e.g., 1000x is 200s/frame)
+            let remaining = Math.abs(step);
+            const direction = Math.sign(step);
+            while (remaining > 0) {
+                const increment = Math.min(remaining, 0.2 * Math.abs(playbackSpeed)); // at most 0.2s * |playbackSpeed| per step
+                currentDate.setSeconds(currentDate.getSeconds() + increment * direction);
+                setInputsFromDate(currentDate);
+                remaining -= increment;
+                changeClock();
+            }
+            animationFrame = requestAnimationFrame(updatePlayback);
+        }
+
+        // If user releases the slider (mouse up, touch end), stop if value is 0
+        speedSlider.addEventListener('change', () => {
+            playbackSpeed = parseInt(speedSlider.value, 10);
+            if (playbackSpeed === 0 && animationFrame) {
+                cancelAnimationFrame(animationFrame);
+                animationFrame = null;
+            }
+            sliderValueDisplay.textContent = playbackSpeed;
+        });
+
+        // If user changes date/time manually, stop playback
+        dateInput.addEventListener('focus', stopPlayback);
+        timeInput.addEventListener('focus', stopPlayback);
+        function stopPlayback() {
+            playbackSpeed = 0;
+            speedSlider.value = 0;
+            sliderValueDisplay.textContent = 0;
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+                animationFrame = null;
+            }
+        }
+
+    </script>
+
+    <script id="tick-clock">
+        function tickClock(now = new Date()) {
+            // Constant names are self-explanatory. All time and date parameters are calculated based on UTC time.
+            const hoursElapsedToday = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+            const earthAngle = hoursElapsedToday * 15;
+            const pinLongitude = parseFloat(getComputedStyle(document.querySelector('.clock'))
+                .getPropertyValue('--pin-longitude')
+                .trim());
+            document.getElementById('clock1').style.setProperty('--earth-angle', earthAngle);
+            document.getElementById("earth-tip").innerHTML = `◀ Polar View of Earth <span class="tip-sub">Today (since Midnight): ${(((earthAngle + pinLongitude) / 360 * 100) % 100).toFixed(2)}%</span>`;
+
+            const newMoonMoment = new Date(Date.UTC(2025, 5, 25, 18, 23, 0)); // Time of a nearest new moon on zenith at 90°W per time of coding. (June 25th, 2025 at 18:23:00 UTC+0)
+            const daysSinceNewMoon = (now - newMoonMoment) / 86400000;
+            const lunarCycle = 29.530588;  // Lunar synodic cycle (apparent moon phase cycle) length
+            const moonAngle = (((daysSinceNewMoon % lunarCycle) + lunarCycle) % lunarCycle) / lunarCycle * 360;
+
+            document.getElementById('clock1').style.setProperty('--moon-angle', moonAngle);
+
+            const moonTip = document.getElementById("moon-tip");
+
+            // Adjust the tip's text alignment direction according to its current position in the clock to avoid overlapping with other tips.
+
+            if (moonAngle > 160 && moonAngle < 195) {
+                moonTip.innerHTML = `Moon <span class="tip-sub">Moon Phase (since New Moon): ${(moonAngle / 360 * 100).toFixed(2)}%</span> ▶`;
+                moonTip.style.marginTop = "calc(var(--moon-size) * 0.25)";
+                moonTip.style.marginLeft = "-24.8em";
+            }
+            else if (moonAngle >= 195 && moonAngle < 330) {
+                moonTip.innerHTML = `    ▲ <br> Moon <span class="tip-sub">Moon Phase (since New Moon): ${(moonAngle / 360 * 100).toFixed(2)}%</span>`;
+                moonTip.style.marginTop = "calc(var(--moon-size) * 1.1)";
+                moonTip.style.marginLeft = "calc(var(--moon-size) * -0.18)";
+            }
+            else if (moonAngle >= 330 && moonAngle < 340) {
+                moonTip.innerHTML = `◀ Moon <span class="tip-sub">Moon Phase (since New Moon): ${(moonAngle / 360 * 100).toFixed(2)}%</span>`;
+                moonTip.style.marginTop = "calc(var(--moon-size) * 0.25)";
+                moonTip.style.marginLeft = "calc(var(--moon-size) * 1.1)";
+            }
+            else {
+                moonTip.innerHTML = `Moon <span class="tip-sub">Moon Phase (since New Moon): ${(moonAngle / 360 * 100).toFixed(2)}%</span><br>    ▼ `;
+                moonTip.style.marginTop = "calc(var(--moon-size) * -1.2)";
+                moonTip.style.marginLeft = "calc(var(--clock-size) * -0.02)";
+            }
+
+            const lastWinterSolstice = new Date(Date.UTC(now.getUTCFullYear() - 1, 11, 22));
+            const thisSpringEquinox = new Date(Date.UTC(now.getUTCFullYear(), 2, 22));
+            const thisSummerSolstice = new Date(Date.UTC(now.getUTCFullYear(), 5, 22));
+            const thisAutumnEquinox = new Date(Date.UTC(now.getUTCFullYear(), 9, 22));
+            const thisWinterSolstice = new Date(Date.UTC(now.getUTCFullYear(), 11, 22));
+            let thisPeriodLength;
+            let periodElapsedPercentage;
+            let curvature;
+            if (now <= thisSummerSolstice) {
+                console.log("First half of the year.");
+                thisPeriodLength = thisSummerSolstice - lastWinterSolstice;
+                periodElapsedPercentage = (now - lastWinterSolstice) / thisPeriodLength;
+                curvature = 205 - (205 - 95) * periodElapsedPercentage;
+            } else {
+                console.log("Second half of the year.");
+                thisPeriodLength = thisWinterSolstice - thisSummerSolstice;
+                periodElapsedPercentage = (now - thisSummerSolstice) / thisPeriodLength;
+                curvature = 95 + (205 - 95) * periodElapsedPercentage;
+            }
+            console.log("INFO: "
+                + "thisPeriodLength: " + thisPeriodLength + '\n'
+                + "periodElapsedPercentage: " + periodElapsedPercentage + '\n'
+                + "Terminator curvature: " + curvature);
+
+            document.getElementById('terminator-path').setAttribute('d',
+                `M0,0 L150,0 ` +
+                `C${curvature},100 ${curvature},200 150,300 ` +
+                `L0,300 Z`);
+
+            // The New Year coordinates are fetched per local timezone instead of UTC time.
+            const thisNewYear = new Date(now.getFullYear(), 0, 1);
+            const nextNewYear = new Date(now.getFullYear() + 1, 0, 1);
+            const thisYearLength = nextNewYear - thisNewYear;
+            const yearElapsedPercentage = (now - thisNewYear) / thisYearLength;
+            console.log("INFO: "
+                + "thisNewYear: " + thisNewYear + '\n'
+                + "nextNewYear: " + nextNewYear + '\n'
+                + "yearElapsedPercentage: " + yearElapsedPercentage);
+            document.getElementById("terminator-tip").innerHTML = `◀ Terminator <span class="tip-sub">This Year (since New Year): ${(yearElapsedPercentage * 100).toFixed(2)}%</span>`;
+        }
+        tickClock();
+        updateClock = setInterval(tickClock, 1000);
+    </script>
+
+</body>
+
+</html>
