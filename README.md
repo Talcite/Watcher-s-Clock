@@ -10,11 +10,11 @@ It uses Earth (with terminator), Moon, and a pin to represent the time and date 
 ## Features
 
 - 🕛 View live time.
-- 📍 Change the pin's location, either by IP-based auo-locate or manual select on the map.
+- 📍 Change the pin's location, either by IP-based auto-locate or manual select on the map.
 - 💡 Show hints of the composite elements.
 - 📅 Input a time and date within the year range of 100 CE to 9999 CE and preview the clock at the given time.
 - **↔️ Time lapse:** Select a specified time within the current day by a slider, drag within the range of 00:00 to 23:59
-- **⏩ Playback:** Allows the clock to automatically run fast forward or backward, maximum speed ±100000x (1 sec = 100000 sec, i.e. 1.1574 days)
+- **⏪⏩ Playback:** Allows the clock to automatically run fast forward or backward, maximum speed ±100000x (1 sec = 100000 sec, i.e. 1.1574 days)
 
 ### WIP:
 - 🌏 Toggle hemispheres.
